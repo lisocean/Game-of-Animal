@@ -11,6 +11,7 @@ import kotlin.math.min
 object LogicOfGame {
     const val maxLine = 9
     var score = 0
+
     val allInfo  = MutableList(maxLine){ MutableList(maxLine){ ItemInfo() }}
     val resOfAnimal = listOf(
         R.mipmap.bearartboard1,
@@ -68,6 +69,8 @@ object LogicOfGame {
     private val y2 : Int
         get() = p2.y + 1
 
+    val listOfLine = mutableListOf<Point>()
+    val point = Point(-1,-1)
     /**
      * juice if first and second can be remove
      * vertical,horizon,turn_once,turn_twice
@@ -76,16 +79,19 @@ object LogicOfGame {
         get() = remove()
 
     private fun remove() : Boolean{
+        listOfLine.clear()
         if(firstSelectOfItem.itemType != secondSelectOfItem.itemType)
             return false
         block[x1][y1] = 0
         block[x2][y2] = 0
         //0 z
-        if(matchBlock(x1, y1, x2, y2))
+        if(matchBlock(x1,y1, x2, y2)){
             return true
-        //1 z
-        if(matchBlockOne(x1,y1,x2, y2))
+        }
+        if(matchBlockOne(x1, y1, x2, y2)){
+            listOfLine.add(point)
             return true
+        }
         //2 z
         if(matchBlockTwo())
             return true
@@ -115,40 +121,63 @@ object LogicOfGame {
     }
     //1 z
     private fun matchBlockOne(x1 : Int,y1 : Int,x2 : Int,y2 : Int) : Boolean{
+
         //0 z
         if(x1 == x2 || y1 == y2)
-            return matchBlock(x1, y1, x2, y2)
+            return false
         //turn
         if(block[x1][y2] == 0){
             val stMatch = matchBlock(x1,y1, x1, y2)
             val tdMatch = matchBlock(x1,y2, x2, y2)
             if(stMatch && tdMatch)
+            {
+                point.x = x1 - 1
+                point.y = y2 - 1
                 return true
+            }
+
         }
         if(block[x2][y1] == 0){
             val stMatch = matchBlock(x1,y1, x2, y1)
             val tdMatch = matchBlock(x2,y1, x2, y2)
             if(stMatch && tdMatch)
+            {
+                point.x = x2 - 1
+                point.y = y1 - 1
                 return true
+            }
+
         }
         return  false
     }
     //2 z
 
     private fun matchBlockTwo() : Boolean{
+
+
         //scan first y
         for(i in (y1 + 1)..10){
             if(block[x1][i] == 0){
+                val p = Point(x1 - 1, i - 1)
                 val dest = matchBlockOne(x1,i, x2, y2)
-                if (dest) return true
+                if (dest) {
+                    listOfLine.add(p)
+                    listOfLine.add(point)
+                    return true
+                }
             }
             else
                 break
         }
         for(i in (y1 - 1) downTo  0){
             if(block[x1][i] == 0){
+                val p = Point(x1 - 1, i - 1)
                 val dest = matchBlockOne(x1,i, x2, y2)
-                if (dest) return true
+                if (dest) {
+                    listOfLine.add(p)
+                    listOfLine.add(point)
+                    return true
+                }
             }
             else
                 break
@@ -156,16 +185,26 @@ object LogicOfGame {
         //scan first x
         for(i in (x1 + 1)..10){
             if(block[i][y1] == 0){
+                val p = Point( i - 1, y1 - 1)
                 val dest = matchBlockOne(i, y1, x2, y2)
-                if(dest) return true
+                if (dest) {
+                    listOfLine.add(p)
+                    listOfLine.add(point)
+                    return true
+                }
             }
             else
                 break
         }
         for( i in (x1 - 1) downTo 0){
             if(block[i][y1] == 0){
+                val p = Point( i - 1, y1 - 1)
                 val dest = matchBlockOne(i, y1, x2, y2)
-                if(dest) return true
+                if (dest) {
+                    listOfLine.add(p)
+                    listOfLine.add(point)
+                    return true
+                }
             }
             else
                 break

@@ -1,24 +1,44 @@
 package com.lisocean.game.ui.adapter
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Point
+import android.os.Handler
+import android.os.Message
+import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.RecyclerView
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import com.lisocean.game.logic.LogicOfGame
 import com.lisocean.game.model.ItemInfo
 import com.lisocean.game.weight.ItemView
-import kotlinx.android.synthetic.main.activity_game.view.*
+import com.lisocean.game.weight.UniformLine
+import kotlinx.android.synthetic.main.activity_game.*
 import kotlinx.android.synthetic.main.item.view.*
+import org.jetbrains.anko.find
 import org.jetbrains.anko.imageBitmap
 
-class RecyclerViewAdapter(val textView: TextView) : RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>(){
 
+class RecyclerViewAdapter(val activity : AppCompatActivity) : RecyclerView.Adapter<RecyclerViewAdapter.ViewHolder>(){
+    private val MSG_DRAWLINE = 0x00
+    private val msg_removeLine = 0x01
+    private val msg_nanshou =0x10
+    val xline = 105
+    val yline = 120
+    private var handler = @SuppressLint("HandlerLeak")
+    object : Handler(){
+        override fun handleMessage(msg: Message?) {
+            when(msg?.what){
+                MSG_DRAWLINE -> drawLine()
+                msg_removeLine -> removeLine()
+                msg_nanshou -> nanshou()
+            }
+        }
+    }
+
+    val lineList = mutableListOf<UniformLine>()
     private var firstView : View? = null
+    private var secondView : View? = null
     override fun onCreateViewHolder(p0: ViewGroup, p1: Int): ViewHolder {
             return ViewHolder(ItemView(p0.context))
     }
@@ -26,9 +46,73 @@ class RecyclerViewAdapter(val textView: TextView) : RecyclerView.Adapter<Recycle
     override fun getItemCount(): Int {
         return 81
     }
+    private fun removeLine(){
+        lineList.forEach {
+            activity.layout.removeView(it)
+        }
+        handler.removeCallbacksAndMessages(null)
+        lineList.clear()
+
+    }
+    private fun drawLine(){
+        val size =  LogicOfGame.listOfLine.size
+        var location1 : IntArray = intArrayOf(0,0)
+        firstView?.getLocationOnScreen(location1)
+        var location2 : IntArray = intArrayOf(0,0)
+        secondView?.getLocationOnScreen(location2)
+
+        when(size){
+            0->lineList.add(UniformLine(activity.baseContext, location1[0] + 50,location1[1] - 30, location2[0] + 50, location2[1] - 30))
+            1->{
+                var location3 = intArrayOf(0,0)
+                activity.find<View>(LogicOfGame.listOfLine[0].x * 9 + LogicOfGame.listOfLine[0].y + 1).getLocationInWindow(location3)
+                lineList.add(UniformLine(activity.baseContext, location1[0] + 50,location1[1] - 30, location3[0] + 50, location3[1] - 30))
+                lineList.add(UniformLine(activity.baseContext, location3[0] + 50,location3[1] - 30, location2[0] + 50, location2[1] - 30))
+            }
+            2->{
+                println(LogicOfGame)
+                if(LogicOfGame.listOfLine[0].x == -1 && LogicOfGame.listOfLine[1].x == -1)
+                    return
+                if(LogicOfGame.listOfLine[0].x == 9 && LogicOfGame.listOfLine[1].x == 9)
+                    return
+                if(LogicOfGame.listOfLine[0].y == -1 && LogicOfGame.listOfLine[1].y == -1)
+                    return
+                if(LogicOfGame.listOfLine[0].y == 9 && LogicOfGame.listOfLine[1].y == 9)
+                    return
+                var location3 = intArrayOf(0,0)
+                activity.find<View>(LogicOfGame.listOfLine[0].x  * 9+ LogicOfGame.listOfLine[0].y + 1).getLocationInWindow(location3)
+                var location4 = intArrayOf(0,0)
+                activity.find<View>(LogicOfGame.listOfLine[1].x * 9 + LogicOfGame.listOfLine[1].y + 1).getLocationInWindow(location4)
+                lineList.add(UniformLine(activity.baseContext, location1[0] + 50,location1[1] - 30, location3[0] + 50, location3[1] - 30))
+                lineList.add(UniformLine(activity.baseContext, location3[0] + 50,location3[1] - 30, location4[0] + 50, location4[1] - 30))
+                lineList.add(UniformLine(activity.baseContext, location4[0] + 50,location4[1] - 30, location2[0] + 50, location2[1] - 30))
+            }
+        }
+        lineList.forEach {
+            this@RecyclerViewAdapter.activity.layout.addView(it)
+        }
+
+        secondView?.visibility = View.INVISIBLE
+        firstView?.visibility = View.INVISIBLE
+        firstView = null
+        secondView = null
+        LogicOfGame.firstSelectOfItem = ItemInfo()
+        LogicOfGame.secondSelectOfItem = ItemInfo()
+    }
+    private fun nanshou(){
+        if(LogicOfGame.listOfLine.size == 2){
+            secondView?.visibility = View.INVISIBLE
+            firstView?.visibility = View.INVISIBLE
+            firstView = null
+            secondView = null
+            LogicOfGame.firstSelectOfItem = ItemInfo()
+            LogicOfGame.secondSelectOfItem = ItemInfo()
+        }
+    }
 
     override fun onBindViewHolder(p0: ViewHolder, p1: Int) {
         p0.itemView.apply {
+            id = p1 + 1
             val x = p1 / 9
             val y = p1 % 9
             LogicOfGame.allInfo[x][y] =
@@ -41,7 +125,7 @@ class RecyclerViewAdapter(val textView: TextView) : RecyclerView.Adapter<Recycle
 
             itemOfImage.setOnClickListener {
                 //set a id of this to make i can find it by id
-                it.id = p1 + 1
+
                 if(it.visibility == View.INVISIBLE)
                     return@setOnClickListener
                 //no one was selected
@@ -68,22 +152,21 @@ class RecyclerViewAdapter(val textView: TextView) : RecyclerView.Adapter<Recycle
                         it.isSelected = true
                         LogicOfGame.secondSelectOfItem = it.tag as ItemInfo
                         LogicOfGame.secondSelectOfItem.isSelect = true
-                        println(LogicOfGame.firstSelectOfItem)
-                        println(LogicOfGame.secondSelectOfItem)
-                        println(LogicOfGame.block)
                         if (LogicOfGame.canRemove){
                             //todo == line to next
                             //todo in the main thread next to async
+                            this@RecyclerViewAdapter.secondView = it
+                            this@RecyclerViewAdapter.handler.sendEmptyMessage(MSG_DRAWLINE)
+                            this@RecyclerViewAdapter.handler.sendEmptyMessageDelayed(msg_removeLine,
+                                (300 * (LogicOfGame.listOfLine.size + 1)).toLong()
+                            )
+                            this@RecyclerViewAdapter.handler.sendEmptyMessageDelayed(msg_nanshou,
+                                30.toLong())
+                 //           this@RecyclerViewAdapter.activity.layout.addView(UniformLine(activity.baseContext,300, 500, 600, 200))
                             LogicOfGame.score += 2
 
-                            this@RecyclerViewAdapter.textView.text = "Score : ${LogicOfGame.score}"
-                            it.visibility = View.INVISIBLE
-                            firstView?.visibility = View.INVISIBLE
-                            firstView = null
-                            val pointOne = LogicOfGame.firstSelectOfItem.point
-                            val pointTwo = LogicOfGame.secondSelectOfItem.point
-                            LogicOfGame.firstSelectOfItem = ItemInfo()
-                            LogicOfGame.secondSelectOfItem = ItemInfo()
+                            this@RecyclerViewAdapter.activity.textView.text = "Score : ${LogicOfGame.score}"
+
 
                         }else{
                             //init this view

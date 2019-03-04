@@ -31,7 +31,7 @@ class GameActivity : AppCompatActivity(){
                     return false
                 }
             }
-            adapter = RecyclerViewAdapter(textView)
+            adapter = RecyclerViewAdapter(this@GameActivity)
         }
 
     }
